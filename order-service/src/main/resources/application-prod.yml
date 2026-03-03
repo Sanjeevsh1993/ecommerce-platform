@@ -17,6 +17,8 @@ spring:
 app:
   services:
     user-service-url: ${USER_SERVICE_URL}  # No default — must be explicitly set in prod
+    user-service-connect-timeout-ms: 2000
+    user-service-read-timeout-ms: 5000     # Stricter in prod
 
 resilience4j:
   circuitbreaker:
@@ -26,10 +28,6 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
-  timelimiter:
-    instances:
-      user-service:
-        timeout-duration: 5s  # Stricter in prod
 
 management:
   endpoint:

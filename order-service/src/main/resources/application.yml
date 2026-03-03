@@ -35,7 +35,12 @@ spring:
 app:
   services:
     user-service-url: ${USER_SERVICE_URL:http://localhost:8082}
+    # Timeouts set on the HTTP request factory — Resilience4j TimeLimiter is for async only
+    user-service-connect-timeout-ms: 5000
+    user-service-read-timeout-ms: 10000
 
+# Circuit breaker — opens after 50% failure rate over 10 calls, waits 30s before retry
+# TimeLimiter block removed: not applicable for synchronous RestClient calls
 resilience4j:
   circuitbreaker:
     instances:
@@ -43,10 +48,7 @@ resilience4j:
         sliding-window-size: 10
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
-  timelimiter:
-    instances:
-      user-service:
-        timeout-duration: 10s
+        permitted-number-of-calls-in-half-open-state: 3
 
 springdoc:
   api-docs:

@@ -14,6 +14,8 @@ spring:
 app:
   services:
     user-service-url: ${USER_SERVICE_URL:http://dev-user-service:8082}
+    user-service-connect-timeout-ms: 5000
+    user-service-read-timeout-ms: 15000  # More lenient in dev
 
 resilience4j:
   circuitbreaker:
@@ -22,10 +24,6 @@ resilience4j:
         sliding-window-size: 5
         failure-rate-threshold: 60
         wait-duration-in-open-state: 15s
-  timelimiter:
-    instances:
-      user-service:
-        timeout-duration: 15s  # More lenient in dev
 
 logging:
   level:
