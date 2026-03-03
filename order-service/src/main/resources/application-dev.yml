@@ -18,6 +18,13 @@ app:
     user-service-read-timeout-ms: 15000  # More lenient in dev
 
 resilience4j:
+  retry:
+    instances:
+      user-service:
+        max-attempts: 3
+        wait-duration: 200ms       # Faster retries in dev for quick feedback
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2
   circuitbreaker:
     instances:
       user-service:

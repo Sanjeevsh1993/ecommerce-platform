@@ -39,9 +39,31 @@ app:
     user-service-connect-timeout-ms: 5000
     user-service-read-timeout-ms: 10000
 
-# Circuit breaker — opens after 50% failure rate over 10 calls, waits 30s before retry
-# TimeLimiter block removed: not applicable for synchronous RestClient calls
 resilience4j:
+
+  # ── Retry ────────────────────────────────────────────────────────────────
+  # Outermost decorator: retries before fallback fires.
+  # Only retries on transient network/server errors — never on 4xx (client bugs).
+  # Ignores CallNotPermittedException so an open circuit stops retries immediately.
+  retry:
+    instances:
+      user-service:
+        max-attempts: 3
+        wait-duration: 500ms
+        enable-exponential-backoff: true
+        exponential-backoff-multiplier: 2        # 500ms → 1s → 2s
+        retry-exceptions:
+          - java.io.IOException
+          - org.springframework.web.client.ResourceAccessException   # connect/read timeout
+          - org.springframework.web.client.HttpServerErrorException  # 5xx from user-service
+        ignore-exceptions:
+          - io.github.resilience4j.circuitbreaker.CallNotPermittedException  # CB open → stop immediately
+          - org.springframework.web.client.HttpClientErrorException          # 4xx → don't retry
+
+  # ── Circuit Breaker ───────────────────────────────────────────────────────
+  # Inner decorator: tracks failure rate across all attempts (including retries).
+  # No fallbackMethod here — exceptions propagate up to @Retry so retries can happen.
+  # When open, throws CallNotPermittedException which @Retry ignores → fallback fires.
   circuitbreaker:
     instances:
       user-service:
@@ -49,6 +71,12 @@ resilience4j:
         failure-rate-threshold: 50
         wait-duration-in-open-state: 30s
         permitted-number-of-calls-in-half-open-state: 3
+        record-exceptions:
+          - java.io.IOException
+          - org.springframework.web.client.ResourceAccessException
+          - org.springframework.web.client.HttpServerErrorException
+        ignore-exceptions:
+          - org.springframework.web.client.HttpClientErrorException  # 4xx not a CB failure
 
 springdoc:
   api-docs:
