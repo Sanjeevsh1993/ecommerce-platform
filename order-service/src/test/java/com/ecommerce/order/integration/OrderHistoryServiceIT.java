@@ -8,7 +8,6 @@ import com.ecommerce.order.client.CustomerSummaryClientDto;
 import com.ecommerce.order.client.UserServiceClient;
 import com.ecommerce.order.dto.*;
 import com.ecommerce.shared.constants.AppConstants;
-import com.ecommerce.shared.response.ApiResponse;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.*;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -52,7 +51,7 @@ class OrderHistoryServiceIT {
     @Autowired MockMvc mockMvc;
     @Autowired ObjectMapper objectMapper;
 
-    // Feign client mocked — user-service not running in IT context
+    // WebClient-based client mocked — user-service not running in IT context
     @MockBean UserServiceClient userServiceClient;
 
     @BeforeEach
@@ -61,7 +60,7 @@ class OrderHistoryServiceIT {
         cust.setId(1L); cust.setCustomerNumber("CUST-001");
         cust.setFirstName("Test"); cust.setLastName("Customer");
         when(userServiceClient.getCustomerSummary(anyLong()))
-                .thenReturn(ApiResponse.success(cust));
+                .thenReturn(cust);
     }
 
     // BC-014: add order history + verify navigationHint=CUSTOMER_SUMMARY persisted

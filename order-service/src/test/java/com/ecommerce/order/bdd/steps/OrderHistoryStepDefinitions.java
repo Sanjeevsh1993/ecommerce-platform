@@ -6,7 +6,6 @@ import com.ecommerce.order.client.CustomerSummaryClientDto;
 import com.ecommerce.order.client.UserServiceClient;
 import com.ecommerce.order.dto.CreateOrderHistoryRequest;
 import com.ecommerce.order.repository.OrderHistoryRepository;
-import com.ecommerce.shared.response.ApiResponse;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.cucumber.java.Before;
@@ -62,7 +61,7 @@ public class OrderHistoryStepDefinitions {
         cust.setId((long) id); cust.setCustomerNumber(customerNumber);
         cust.setFirstName("Test"); cust.setLastName("Customer");
         when(userServiceClient.getCustomerSummary((long) id))
-                .thenReturn(ApiResponse.success(cust));
+                .thenReturn(cust);
     }
 
     @Given("an order history request for order {string} with maintainScreen false")

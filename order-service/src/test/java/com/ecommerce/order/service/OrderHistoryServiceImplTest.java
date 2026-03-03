@@ -11,7 +11,6 @@ import com.ecommerce.order.service.impl.OrderHistoryServiceImpl;
 import com.ecommerce.shared.constants.AppConstants;
 import com.ecommerce.shared.exception.BusinessRuleException;
 import com.ecommerce.shared.exception.ResourceNotFoundException;
-import com.ecommerce.shared.response.ApiResponse;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -124,7 +123,7 @@ class OrderHistoryServiceImplTest {
     void listOrderHistory_includeExternal_false_callsFilteredQuery() {
         CustomerSummaryClientDto cust = new CustomerSummaryClientDto();
         cust.setCustomerNumber("CUST-001");
-        when(userServiceClient.getCustomerSummary(1L)).thenReturn(ApiResponse.success(cust));
+        when(userServiceClient.getCustomerSummary(1L)).thenReturn(cust);
         when(orderHistoryRepository.findByCustomerIdWithExternalFilter(1L, false)).thenReturn(List.of());
 
         OrderHistoryListResponse result = service.listOrderHistory(1L, false);

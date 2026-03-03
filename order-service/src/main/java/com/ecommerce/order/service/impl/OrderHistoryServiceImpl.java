@@ -33,8 +33,8 @@ public class OrderHistoryServiceImpl implements OrderHistoryService {
     @Override
     @Transactional(readOnly = true)
     public OrderHistoryListResponse listOrderHistory(Long customerId, boolean includeExternal) {
-        // BC-013: pre-populate customer info via Feign
-        var customerSummary = userServiceClient.getCustomerSummary(customerId).getData();
+        // BC-013: pre-populate customer info via WebClient (circuit breaker fallback returns null)
+        var customerSummary = userServiceClient.getCustomerSummary(customerId);
         // BC-020: filter external orders based on toggle flag
         List<OrderHistory> entries = orderHistoryRepository
                 .findByCustomerIdWithExternalFilter(customerId, includeExternal);
