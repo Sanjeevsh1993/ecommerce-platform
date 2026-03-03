@@ -88,6 +88,22 @@
         <!-- RestClient (Spring 6.1) — synchronous HTTP client, built into spring-boot-starter-web -->
         <!-- No extra dependency needed — RestClient ships with spring-web -->
 
+        <!-- Observability: distributed tracing via Micrometer Tracing + Brave (Zipkin-compatible) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
+        </dependency>
+
+        <!-- Observability: Prometheus metrics export (/actuator/prometheus) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- Resilience4j — circuit breaker on user-service calls (BC-050) -->
         <dependency>
             <groupId>io.github.resilience4j</groupId>

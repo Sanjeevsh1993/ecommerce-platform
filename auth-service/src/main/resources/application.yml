@@ -49,15 +49,24 @@ app:
     refresh-token-expiry-ms: 604800000   # 7 days
     refresh-cookie-name: refresh_token
 
-# Actuator
+# Actuator + Observability
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, prometheus
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}   # label every metric with service name
+  tracing:
+    sampling:
+      probability: 1.0                          # 100% in local/dev; reduce in prod
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
 
 # SpringDoc / Swagger UI
 springdoc:
@@ -68,12 +77,12 @@ springdoc:
     tags-sorter: alpha
     operations-sorter: alpha
 
-# Logging with MDC correlation ID (BC-047)
+# Logging — MDC carries traceId/spanId (auto-set by Micrometer Tracing) + correlationId (BC-047)
 logging:
   level:
     root: INFO
     com.ecommerce.auth: DEBUG
     org.springframework.security: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId},%X{spanId}] [%X{correlationId}] %logger{36} - %msg%n"
+    file:    "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId},%X{spanId}] [%X{correlationId}] %logger{36} - %msg%n"

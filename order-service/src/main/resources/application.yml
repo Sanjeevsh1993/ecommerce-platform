@@ -88,14 +88,23 @@ management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics
+        include: health, info, metrics, prometheus
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
 
 logging:
   level:
     root: INFO
     com.ecommerce.order: DEBUG
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId},%X{spanId}] [%X{correlationId}] %logger{36} - %msg%n"

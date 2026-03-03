@@ -162,15 +162,24 @@ resilience4j:
       catalog-service:
         timeout-duration: 10s
 
-# Actuator
+# Actuator + Observability
 management:
   endpoints:
     web:
       exposure:
-        include: health, info, metrics, gateway, circuitbreakers
+        include: health, info, metrics, prometheus, gateway, circuitbreakers
   endpoint:
     health:
       show-details: when-authorized
+  metrics:
+    tags:
+      application: ${spring.application.name}
+  tracing:
+    sampling:
+      probability: 1.0
+  zipkin:
+    tracing:
+      endpoint: ${ZIPKIN_URL:http://localhost:9411}/api/v2/spans
 
 # SpringDoc — aggregated Swagger UI for all services
 springdoc:
@@ -186,7 +195,7 @@ springdoc:
       - name: catalog-service
         url: /swagger/catalog/v3/api-docs
 
-# Logging with MDC correlation ID (BC-046, BC-047)
+# Logging — MDC carries traceId/spanId (auto-set by Micrometer Tracing) + correlationId (BC-046, BC-047)
 logging:
   level:
     root: INFO
@@ -194,5 +203,5 @@ logging:
     org.springframework.cloud.gateway: INFO
     org.springframework.security: INFO
   pattern:
-    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
-    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId},%X{spanId}] [%X{correlationId}] %logger{36} - %msg%n"
+    file:    "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{traceId},%X{spanId}] [%X{correlationId}] %logger{36} - %msg%n"

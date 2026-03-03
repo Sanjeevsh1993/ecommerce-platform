@@ -64,6 +64,22 @@
             <artifactId>spring-boot-starter-actuator</artifactId>
         </dependency>
 
+        <!-- Observability: distributed tracing via Micrometer Tracing + Brave (Zipkin-compatible) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-tracing-bridge-brave</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>io.zipkin.reporter2</groupId>
+            <artifactId>zipkin-reporter-brave</artifactId>
+        </dependency>
+
+        <!-- Observability: Prometheus metrics export (/actuator/prometheus) -->
+        <dependency>
+            <groupId>io.micrometer</groupId>
+            <artifactId>micrometer-registry-prometheus</artifactId>
+        </dependency>
+
         <!-- JWT — validate tokens at gateway before routing -->
         <dependency>
             <groupId>io.jsonwebtoken</groupId>

@@ -44,6 +44,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       JWT_SECRET: changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!
+      ZIPKIN_URL: http://zipkin:9411
     depends_on:
       mysql:
         condition: service_healthy
@@ -68,6 +69,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_users?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      ZIPKIN_URL: http://zipkin:9411
     depends_on:
       mysql:
         condition: service_healthy
@@ -93,6 +95,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       APP_SERVICES_USER-SERVICE-URL: http://user-service:8082
+      ZIPKIN_URL: http://zipkin:9411
     depends_on:
       mysql:
         condition: service_healthy
@@ -119,6 +122,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_catalog?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
+      ZIPKIN_URL: http://zipkin:9411
     depends_on:
       mysql:
         condition: service_healthy
@@ -142,6 +146,7 @@ services:
     environment:
       JWT_SECRET: changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!
       APP_GATEWAY_PUBLIC-PATHS: "/api/v1/auth/**,/actuator/health,/swagger-ui/**,/swagger-ui.html,/webjars/**,/v3/api-docs/**,/swagger/**,/fallback/**"
+      ZIPKIN_URL: http://zipkin:9411
     depends_on:
       auth-service:
         condition: service_healthy
@@ -160,8 +165,54 @@ services:
     networks:
       - ecommerce-net
 
+  # ─────────────────────────────────────────────
+  # Zipkin — distributed trace collector & UI
+  # UI: http://localhost:9411
+  # ─────────────────────────────────────────────
+  zipkin:
+    image: openzipkin/zipkin:3
+    container_name: ecommerce-zipkin
+    ports:
+      - "9411:9411"
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # Prometheus — metrics scraper
+  # UI: http://localhost:9090
+  # ─────────────────────────────────────────────
+  prometheus:
+    image: prom/prometheus:v2.50.0
+    container_name: ecommerce-prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # Grafana — metrics dashboards
+  # UI: http://localhost:3000  admin/admin
+  # ─────────────────────────────────────────────
+  grafana:
+    image: grafana/grafana:10.3.0
+    container_name: ecommerce-grafana
+    ports:
+      - "3000:3000"
+    environment:
+      GF_SECURITY_ADMIN_USER: admin
+      GF_SECURITY_ADMIN_PASSWORD: admin
+    volumes:
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+    networks:
+      - ecommerce-net
+
 volumes:
   mysql-data:
+  grafana-data:
 
 networks:
   ecommerce-net:
