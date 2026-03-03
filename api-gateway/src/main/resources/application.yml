@@ -45,7 +45,7 @@ spring:
 
         # BC-034..042: auth-service routes — PUBLIC (JWT GlobalFilter skips /api/v1/auth/**)
         - id: auth-service
-          uri: http://localhost:8081
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/api/v1/auth/**
           filters:
@@ -56,7 +56,7 @@ spring:
 
         # BC-001..012: user-service routes — PROTECTED
         - id: user-service
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/api/v1/customers/**
           filters:
@@ -67,7 +67,7 @@ spring:
 
         # BC-013..029, BC-033: order-service routes — PROTECTED
         - id: order-service
-          uri: http://localhost:8083
+          uri: ${ORDER_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/api/v1/order-history/**, /api/v1/orders/**, /api/v1/work-queue/**
           filters:
@@ -78,7 +78,7 @@ spring:
 
         # BC-031, BC-032: catalog-service routes — PROTECTED
         - id: catalog-service
-          uri: http://localhost:8084
+          uri: ${CATALOG_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/api/v1/catalog/**
           filters:
@@ -89,28 +89,28 @@ spring:
 
         # Swagger UI aggregation — proxy each service's API docs
         - id: auth-service-swagger
-          uri: http://localhost:8081
+          uri: ${AUTH_SERVICE_URL:http://localhost:8081}
           predicates:
             - Path=/swagger/auth/**
           filters:
             - RewritePath=/swagger/auth/(?<remaining>.*), /${remaining}
 
         - id: user-service-swagger
-          uri: http://localhost:8082
+          uri: ${USER_SERVICE_URL:http://localhost:8082}
           predicates:
             - Path=/swagger/users/**
           filters:
             - RewritePath=/swagger/users/(?<remaining>.*), /${remaining}
 
         - id: order-service-swagger
-          uri: http://localhost:8083
+          uri: ${ORDER_SERVICE_URL:http://localhost:8083}
           predicates:
             - Path=/swagger/orders/**
           filters:
             - RewritePath=/swagger/orders/(?<remaining>.*), /${remaining}
 
         - id: catalog-service-swagger
-          uri: http://localhost:8084
+          uri: ${CATALOG_SERVICE_URL:http://localhost:8084}
           predicates:
             - Path=/swagger/catalog/**
           filters:

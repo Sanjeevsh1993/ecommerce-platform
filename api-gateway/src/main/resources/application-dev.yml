@@ -1,0 +1,42 @@
+# api-gateway — Development environment
+# Activate with: --spring.profiles.active=dev
+# Service URLs resolved via env vars (AUTH_SERVICE_URL, USER_SERVICE_URL, etc.)
+# Required env vars: JWT_SECRET
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:3000"
+              - "http://localhost:4200"
+              - "http://dev.ecommerce.internal"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - Authorization
+              - Content-Type
+              - X-Correlation-ID
+            exposed-headers:
+              - X-Correlation-ID
+            allow-credentials: true
+            max-age: 3600
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, gateway, circuitbreakers
+
+logging:
+  level:
+    root: INFO
+    com.ecommerce.gateway: DEBUG
+    org.springframework.cloud.gateway: DEBUG
+    org.springframework.security: DEBUG

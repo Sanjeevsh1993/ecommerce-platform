@@ -1,0 +1,84 @@
+# api-gateway — Production environment
+# Activate with: --spring.profiles.active=prod
+# Service URLs resolved via env vars — no defaults in prod (must be explicitly set)
+# Required env vars: JWT_SECRET, AUTH_SERVICE_URL, USER_SERVICE_URL, ORDER_SERVICE_URL, CATALOG_SERVICE_URL
+
+spring:
+  cloud:
+    gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "https://ecommerce.com"
+              - "https://www.ecommerce.com"
+              - "https://admin.ecommerce.com"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - Authorization
+              - Content-Type
+              - X-Correlation-ID
+            exposed-headers:
+              - X-Correlation-ID
+            allow-credentials: true
+            max-age: 86400  # 24h cache — longer in prod to reduce preflight traffic
+      httpclient:
+        connect-timeout: 2000
+        response-timeout: 5s
+
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-service:
+        sliding-window-size: 20
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 5
+      user-service:
+        sliding-window-size: 20
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 5
+      order-service:
+        sliding-window-size: 20
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 5
+      catalog-service:
+        sliding-window-size: 20
+        failure-rate-threshold: 40
+        wait-duration-in-open-state: 60s
+        permitted-number-of-calls-in-half-open-state: 5
+  timelimiter:
+    instances:
+      auth-service:
+        timeout-duration: 5s
+      user-service:
+        timeout-duration: 5s
+      order-service:
+        timeout-duration: 5s
+      catalog-service:
+        timeout-duration: 5s
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics  # Restrict in prod — no gateway/circuitbreakers exposed publicly
+  endpoint:
+    health:
+      show-details: never
+
+logging:
+  level:
+    root: WARN
+    com.ecommerce.gateway: INFO
+    org.springframework.cloud.gateway: WARN
+    org.springframework.security: WARN
+  file:
+    name: /var/log/ecommerce/api-gateway.log
