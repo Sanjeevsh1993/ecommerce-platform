@@ -44,7 +44,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       JWT_SECRET: changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!
-      ZIPKIN_URL: http://zipkin:9411
+      OTEL_ENDPOINT: http://jaeger:4318
     depends_on:
       mysql:
         condition: service_healthy
@@ -69,7 +69,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_users?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
-      ZIPKIN_URL: http://zipkin:9411
+      OTEL_ENDPOINT: http://jaeger:4318
     depends_on:
       mysql:
         condition: service_healthy
@@ -95,7 +95,7 @@ services:
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
       APP_SERVICES_USER-SERVICE-URL: http://user-service:8082
-      ZIPKIN_URL: http://zipkin:9411
+      OTEL_ENDPOINT: http://jaeger:4318
     depends_on:
       mysql:
         condition: service_healthy
@@ -122,7 +122,7 @@ services:
       SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_catalog?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
       SPRING_DATASOURCE_USERNAME: root
       SPRING_DATASOURCE_PASSWORD: root
-      ZIPKIN_URL: http://zipkin:9411
+      OTEL_ENDPOINT: http://jaeger:4318
     depends_on:
       mysql:
         condition: service_healthy
@@ -146,7 +146,7 @@ services:
     environment:
       JWT_SECRET: changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!
       APP_GATEWAY_PUBLIC-PATHS: "/api/v1/auth/**,/actuator/health,/swagger-ui/**,/swagger-ui.html,/webjars/**,/v3/api-docs/**,/swagger/**,/fallback/**"
-      ZIPKIN_URL: http://zipkin:9411
+      OTEL_ENDPOINT: http://jaeger:4318
     depends_on:
       auth-service:
         condition: service_healthy
@@ -166,14 +166,18 @@ services:
       - ecommerce-net
 
   # ─────────────────────────────────────────────
-  # Zipkin — distributed trace collector & UI
-  # UI: http://localhost:9411
+  # Jaeger — OpenTelemetry trace collector & UI
+  # UI:         http://localhost:16686
+  # OTLP HTTP:  http://localhost:4318
   # ─────────────────────────────────────────────
-  zipkin:
-    image: openzipkin/zipkin:3
-    container_name: ecommerce-zipkin
+  jaeger:
+    image: jaegertracing/all-in-one:1.55
+    container_name: ecommerce-jaeger
+    environment:
+      COLLECTOR_OTLP_ENABLED: "true"   # required in 1.x — enables OTLP receiver on port 4318
     ports:
-      - "9411:9411"
+      - "16686:16686"   # Jaeger UI
+      - "4318:4318"     # OTLP HTTP receiver
     networks:
       - ecommerce-net
 
