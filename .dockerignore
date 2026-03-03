@@ -1,0 +1,6 @@
+**/.git
+**/.gitignore
+**/src/test
+**/*.md
+**/target/surefire-reports
+**/target/test-classes

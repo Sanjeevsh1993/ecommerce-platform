@@ -1,0 +1,168 @@
+version: "3.9"
+
+# BC References: BC-035, BC-040, BC-046, BC-047, BC-048, BC-049, BC-050
+# STRANGLER FIG - Phase: 7 - Docker Compose: full platform stack
+# Each microservice gets its own MySQL database (separate schemas, shared MySQL instance).
+# Flyway runs automatically on service startup to create/migrate the schema.
+
+services:
+
+  # ─────────────────────────────────────────────
+  # MySQL — single instance, multiple databases
+  # ─────────────────────────────────────────────
+  mysql:
+    image: mysql:8.0
+    container_name: ecommerce-mysql
+    environment:
+      MYSQL_ROOT_PASSWORD: root
+      MYSQL_USER: ecommerce
+      MYSQL_PASSWORD: ecommerce
+    ports:
+      - "3306:3306"
+    volumes:
+      - mysql-data:/var/lib/mysql
+      - ./docker/mysql/init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-uroot", "-proot"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # auth-service  — port 8081
+  # ─────────────────────────────────────────────
+  auth-service:
+    image: ecommerce/auth-service:1.0.0
+    container_name: ecommerce-auth
+    ports:
+      - "8081:8081"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      JWT_SECRET: changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8081/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # user-service  — port 8082
+  # ─────────────────────────────────────────────
+  user-service:
+    image: ecommerce/user-service:1.0.0
+    container_name: ecommerce-users
+    ports:
+      - "8082:8082"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_users?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8082/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # order-service  — port 8083
+  # ─────────────────────────────────────────────
+  order-service:
+    image: ecommerce/order-service:1.0.0
+    container_name: ecommerce-orders
+    ports:
+      - "8083:8083"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_orders?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+      APP_SERVICES_USER-SERVICE-URL: http://user-service:8082
+    depends_on:
+      mysql:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8083/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # catalog-service  — port 8084
+  # ─────────────────────────────────────────────
+  catalog-service:
+    image: ecommerce/catalog-service:1.0.0
+    container_name: ecommerce-catalog
+    ports:
+      - "8084:8084"
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:mysql://mysql:3306/ecommerce_catalog?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+      SPRING_DATASOURCE_USERNAME: root
+      SPRING_DATASOURCE_PASSWORD: root
+    depends_on:
+      mysql:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8084/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - ecommerce-net
+
+  # ─────────────────────────────────────────────
+  # api-gateway  — port 8080 (start last)
+  # ─────────────────────────────────────────────
+  api-gateway:
+    image: ecommerce/api-gateway:1.0.0
+    container_name: ecommerce-gateway
+    ports:
+      - "8080:8080"
+    environment:
+      JWT_SECRET: changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!
+      APP_GATEWAY_PUBLIC-PATHS: "/api/v1/auth/**,/actuator/health,/swagger-ui/**,/swagger-ui.html,/webjars/**,/v3/api-docs/**,/swagger/**,/fallback/**"
+    depends_on:
+      auth-service:
+        condition: service_healthy
+      user-service:
+        condition: service_healthy
+      order-service:
+        condition: service_healthy
+      catalog-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health | grep UP || exit 1"]
+      interval: 15s
+      timeout: 5s
+      retries: 10
+      start_period: 60s
+    networks:
+      - ecommerce-net
+
+volumes:
+  mysql-data:
+
+networks:
+  ecommerce-net:
+    driver: bridge

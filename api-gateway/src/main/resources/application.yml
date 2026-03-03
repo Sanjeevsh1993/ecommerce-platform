@@ -1,0 +1,198 @@
+# BC References: BC-035, BC-040, BC-046, BC-047, BC-048, BC-049, BC-050
+# STRANGLER FIG - Phase: 5 - Domain: Gateway / Cross-Cutting
+
+server:
+  port: 8080
+
+spring:
+  application:
+    name: api-gateway
+
+  # Spring Cloud Gateway — routes to services by direct URL (no Eureka)
+  cloud:
+    gateway:
+      # BC-048: Global CORS configuration
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins:
+              - "http://localhost:3000"
+              - "http://localhost:4200"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - DELETE
+              - OPTIONS
+            allowed-headers:
+              - Authorization
+              - Content-Type
+              - X-Correlation-ID
+            exposed-headers:
+              - X-Correlation-ID
+            allow-credentials: true
+            max-age: 3600
+
+      # Timeout defaults
+      httpclient:
+        connect-timeout: 5000
+        response-timeout: 10s
+
+      # Route definitions
+      # Note: JwtAuthenticationFilter and CorrelationIdFilter are GlobalFilter beans —
+      #       they run on every route without needing per-route declaration.
+      routes:
+
+        # BC-034..042: auth-service routes — PUBLIC (JWT GlobalFilter skips /api/v1/auth/**)
+        - id: auth-service
+          uri: http://localhost:8081
+          predicates:
+            - Path=/api/v1/auth/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: auth-service
+                fallbackUri: forward:/fallback/auth
+
+        # BC-001..012: user-service routes — PROTECTED
+        - id: user-service
+          uri: http://localhost:8082
+          predicates:
+            - Path=/api/v1/customers/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: user-service
+                fallbackUri: forward:/fallback/user
+
+        # BC-013..029, BC-033: order-service routes — PROTECTED
+        - id: order-service
+          uri: http://localhost:8083
+          predicates:
+            - Path=/api/v1/order-history/**, /api/v1/orders/**, /api/v1/work-queue/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: order-service
+                fallbackUri: forward:/fallback/order
+
+        # BC-031, BC-032: catalog-service routes — PROTECTED
+        - id: catalog-service
+          uri: http://localhost:8084
+          predicates:
+            - Path=/api/v1/catalog/**
+          filters:
+            - name: CircuitBreaker
+              args:
+                name: catalog-service
+                fallbackUri: forward:/fallback/catalog
+
+        # Swagger UI aggregation — proxy each service's API docs
+        - id: auth-service-swagger
+          uri: http://localhost:8081
+          predicates:
+            - Path=/swagger/auth/**
+          filters:
+            - RewritePath=/swagger/auth/(?<remaining>.*), /${remaining}
+
+        - id: user-service-swagger
+          uri: http://localhost:8082
+          predicates:
+            - Path=/swagger/users/**
+          filters:
+            - RewritePath=/swagger/users/(?<remaining>.*), /${remaining}
+
+        - id: order-service-swagger
+          uri: http://localhost:8083
+          predicates:
+            - Path=/swagger/orders/**
+          filters:
+            - RewritePath=/swagger/orders/(?<remaining>.*), /${remaining}
+
+        - id: catalog-service-swagger
+          uri: http://localhost:8084
+          predicates:
+            - Path=/swagger/catalog/**
+          filters:
+            - RewritePath=/swagger/catalog/(?<remaining>.*), /${remaining}
+
+# JWT — prefixed app.jwt to match @Value bindings in JwtValidator
+# BC-040: validate access token before routing; same secret as auth-service
+app:
+  jwt:
+    secret: ${JWT_SECRET:changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!}
+
+  # BC-046: paths the JWT GlobalFilter will NOT check (public)
+  # Comma-separated string — @Value with SpEL split (YAML block lists not injectable via @Value)
+  gateway:
+    public-paths: "/api/v1/auth/**,/actuator/health,/swagger-ui/**,/swagger-ui.html,/webjars/**,/v3/api-docs/**,/swagger/**,/fallback/**"
+
+# Resilience4j circuit breaker instances (BC-050)
+resilience4j:
+  circuitbreaker:
+    instances:
+      auth-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      user-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      order-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+      catalog-service:
+        sliding-window-size: 10
+        failure-rate-threshold: 50
+        wait-duration-in-open-state: 30s
+        permitted-number-of-calls-in-half-open-state: 3
+  timelimiter:
+    instances:
+      auth-service:
+        timeout-duration: 10s
+      user-service:
+        timeout-duration: 10s
+      order-service:
+        timeout-duration: 10s
+      catalog-service:
+        timeout-duration: 10s
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics, gateway, circuitbreakers
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# SpringDoc — aggregated Swagger UI for all services
+springdoc:
+  swagger-ui:
+    path: /swagger-ui.html
+    urls:
+      - name: auth-service
+        url: /swagger/auth/v3/api-docs
+      - name: user-service
+        url: /swagger/users/v3/api-docs
+      - name: order-service
+        url: /swagger/orders/v3/api-docs
+      - name: catalog-service
+        url: /swagger/catalog/v3/api-docs
+
+# Logging with MDC correlation ID (BC-046, BC-047)
+logging:
+  level:
+    root: INFO
+    com.ecommerce.gateway: DEBUG
+    org.springframework.cloud.gateway: INFO
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"

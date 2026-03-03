@@ -1,0 +1,79 @@
+# BC References: BC-034, BC-035, BC-036, BC-037, BC-038, BC-039, BC-040, BC-041, BC-042
+# STRANGLER FIG - Phase: 4 - Domain: Authentication
+
+server:
+  port: 8081
+  servlet:
+    context-path: /
+
+spring:
+  application:
+    name: auth-service
+
+  # Database — auth-service has its OWN database (database-per-service pattern)
+  datasource:
+    url: jdbc:mysql://localhost:3306/ecommerce_auth?createDatabaseIfNotExist=true&useSSL=false&allowPublicKeyRetrieval=true
+    username: ${DB_USERNAME:root}
+    password: ${DB_PASSWORD:root}
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    hikari:
+      pool-name: auth-service-pool
+      maximum-pool-size: 10
+      minimum-idle: 2
+      connection-timeout: 30000
+      idle-timeout: 600000
+      max-lifetime: 1800000
+
+  jpa:
+    hibernate:
+      ddl-auto: validate   # Flyway manages schema — JPA only validates
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.MySQLDialect
+        format_sql: true
+
+  # Flyway — schema owned by auth-service
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+    validate-on-migrate: true
+
+# JWT — prefixed with app.jwt to match @Value bindings in JwtService + AuthServiceImpl
+# BC-040: access token 15 min  BC-039: refresh token 7 days
+app:
+  jwt:
+    secret: ${JWT_SECRET:changeThisSecretKeyToAtLeast32CharsForHS256SigningAlgorithm!!}
+    access-token-expiry-ms: 900000       # 15 minutes
+    refresh-token-expiry-ms: 604800000   # 7 days
+    refresh-cookie-name: refresh_token
+
+# Actuator
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health, info, metrics
+  endpoint:
+    health:
+      show-details: when-authorized
+
+# SpringDoc / Swagger UI
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  swagger-ui:
+    path: /swagger-ui.html
+    tags-sorter: alpha
+    operations-sorter: alpha
+
+# Logging with MDC correlation ID (BC-047)
+logging:
+  level:
+    root: INFO
+    com.ecommerce.auth: DEBUG
+    org.springframework.security: INFO
+  pattern:
+    console: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
+    file: "%d{yyyy-MM-dd HH:mm:ss} [%thread] %-5level [%X{correlationId}] %logger{36} - %msg%n"
